@@ -6,7 +6,7 @@
     <title>Power Grid Tycoon</title>
     <link rel="icon" type="image/png" href="https://cdn-icons-png.flaticon.com/512/6199/6199049.png">
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/kenneysoftware/ui@latest/dist/ui.min.css">
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <style>
         @keyframes backgroundAnimation {
@@ -77,17 +77,56 @@
 
 
 
-            <!-- Level & XP Bar -->
-            <div class="mt-4">
-                <p class="text-lg font-semibold">Level: <span id="level">1</span></p>
-                <div class="relative w-full bg-gray-700 h-6 rounded-full mt-2">
-                    <div id="xp-bar" class="absolute top-0 left-0 h-full bg-green-500 rounded-full transition-all duration-500" style="width: 0%;"></div>
-                    <span id="xp-text" class="absolute w-full text-center text-white font-bold top-0 left-0 h-full flex items-center justify-center">0 / 10 XP</span>
-                </div>
-            </div>
+<!-- Prestige & Level Anzeige -->
+<div class="mt-4 flex items-center justify-center space-x-6">
+
+    
+    <!-- Prestige Level Anzeige -->
+    <div class="flex items-center space-x-2">
+        <i class="ph ph-diamond text-purple-400 text-2xl"></i>
+        <p class="text-lg font-semibold">Prestige Level: <span id="prestige_level">0</span></p>
+    </div>
+</div>
+
+<!-- Prestige Punkte Anzeige -->
+<div class="mt-2 flex items-center justify-center space-x-2">
+    <i class="ph ph-crown text-orange-400 text-2xl"></i>
+    <p class="text-lg font-semibold">Prestige Punkte: <span id="prestige_points">0</span></p>
+</div>
+
+<!-- Level & XP Bar -->
+<div class="mt-4">
+       <!-- Level Anzeige -->
+       
+        <p class="text-lg font-semibold">Level: <span id="level">1</span></p>
+   
+    <div class="relative w-full bg-gray-700 h-6 rounded-full mt-2">
+        <div id="xp-bar" class="absolute top-0 left-0 h-full bg-green-500 rounded-full transition-all duration-500" style="width: 0%;"></div>
+        <span id="xp-text" class="absolute w-full text-center text-white font-bold top-0 left-0 h-full flex items-center justify-center">0 / 10 XP</span>
+    </div>
+</div>
+<!-- Shop Button für Prestige Upgrades -->
+<div class="mt-6 flex justify-center gap-6">
+    <button onclick="toggleShop()" class="bg-purple-500 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-lg shadow-md">
+        <i class="ph ph-storefront"></i> Shop
+    </button>
+    <button id="prestige-btn" class="w-40 h-12 bg-purple-500 hover:bg-purple-600 text-white font-bold rounded-lg hidden" onclick="prestige()">
+        <i class="ph ph-star"></i> Prestige
+    </button>
+</div>
     
             <!-- Spielerstatistiken -->
             <div class="mt-4 space-y-3">
+                <div class="flex items-center border-b border-gray-600 pb-2">
+                    <i class="ph ph-flame text-green-400 text-2xl"></i>
+                    <span class="text-gray-400 ml-2">Energie Boost Level:</span>
+                    <span id="energy_boost_level" class="text-xl font-bold text-white text-right ml-auto">0</span>
+                </div>
+                <div class="flex items-center border-b border-gray-600 pb-2">
+                    <i class="ph ph-chart-line text-blue-400 text-2xl"></i>
+                    <span class="text-gray-400 ml-2">XP Boost Level:</span>
+                    <span id="xp_boost_level" class="text-xl font-bold text-white text-right ml-auto">0</span>
+                </div>
                 <div class="flex items-center border-b border-gray-600 pb-2">
                     <i class="ph ph-coins text-amber-400 text-2xl"></i>
                     <span class="text-gray-400 ml-2">Geld:</span>
@@ -153,20 +192,82 @@
                     <p class="mt-1 text-sm">Kohlekraftwerk: <span id="coal_price">1500</span></p>
                     <p class="text-xs text-gray-400" id="coal_count">Bereits gekauft: 0</p>
                 </div>
-            
+
+
             </div>
 
                 <!-- Nachrichtenanzeige -->
                 <div id="message" class="mt-4 text-yellow-300 font-semibold text-center opacity-0 transition-opacity duration-500"></div>
+                <p id="prestige-message" class="text-sm text-gray-400 mt-2 hidden">Prestige verfügbar!</p>
         </div>
 
+
+
+<!-- Prestige Upgrade Shop -->
+<div id="shop-container" class="hidden fixed inset-0 bg-black bg-opacity-75 flex justify-center items-center">
+    <div class="bg-gray-900 p-6 rounded-lg shadow-lg text-white">
+        <p id="shop-info" class="text-yellow-400 font-bold"></p>
+        <h2 class="text-2xl font-bold">Prestige Shop</h2>
+        <p>Nutze Prestige-Punkte für dauerhafte Upgrades!</p>
+        <ul class="mt-4 space-y-3">
+            <li>
+                <button onclick="buyUpgrade('energy_boost')" class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg shadow-md">
+                    ⚡ +10% Energieproduktion (Kosten: 5 Prestige Punkte)
+                </button>
+            </li>
+            <li>
+                <button onclick="buyUpgrade('xp_boost')" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow-md">
+                    ⭐ +10% XP Gewinn (Kosten: 5 Prestige Punkte)
+                </button>
+            </li>
+        </ul>
+        <button onclick="toggleShop()" class="mt-4 bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg shadow-md">Schließen</button>
+    </div>
+</div>
+
+
     <script>
+
+
+
+
         document.addEventListener("dblclick", function (e) {
     e.preventDefault(); // ✅ Verhindert Doppelklick-Zoom
 }, { passive: false });
 document.addEventListener("gesturestart", function (e) {
     e.preventDefault(); // ✅ Blockiert Pinch-to-Zoom
 });
+
+
+function prestige() {
+    fetch("/prestige")
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showMessage(`Prestige erreicht! Du hast ${data.prestige_points} Prestige-Punkte erhalten.`);
+            updateStats();
+        } else {
+            showMessage(data.error);
+        }
+    });
+}
+
+function toggleShop() {
+    document.getElementById("shop-container").classList.toggle("hidden");
+}
+
+function buyUpgrade(type) {
+    fetch(`/buy_upgrade?type=${type}`)
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            document.getElementById("shop-info").innerText = "Upgrade erfolgreich gekauft!";
+            updateStats();
+        } else {
+            document.getElementById("shop-info").innerText = data.error;
+        }
+    });
+}
 
 function logout() {
             fetch("/logout")
@@ -201,7 +302,7 @@ function logout() {
                 // Wähle unterschiedliche Medaillenfarben für Top 3
                 let medalIcon = `<i class="ph ph-medal text-xl ${index === 0 ? 'text-yellow-400' : index === 1 ? 'text-gray-300' : index === 2 ? 'text-orange-500' : 'text-white'}"></i>`;
                 
-                listItem.innerHTML = `${medalIcon} <b>${player.username}</b> - Level ${formatNumber(player.level)}`;
+                listItem.innerHTML = `${medalIcon} <b>${player.username}</b> - Prestige Level ${formatNumber(player.prestige_level)}`;
                 leaderboardList.appendChild(listItem);
             });
 
@@ -211,10 +312,18 @@ function logout() {
 }
 
 
+
 function closeLeaderboard() {
     document.getElementById("leaderboard-modal").classList.add("hidden");
 }
 function formatNumber(num) {
+    if (num >= 1e100) return (num / 1e100).toFixed(2).replace(/\.0+$/, "") + "Go"; // Googol
+    if (num >= 1e90) return (num / 1e90).toFixed(2).replace(/\.0+$/, "") + "Nn"; // Novemnonagintillion
+    if (num >= 1e80) return (num / 1e80).toFixed(2).replace(/\.0+$/, "") + "Otg"; // Octogintillion
+    if (num >= 1e70) return (num / 1e70).toFixed(2).replace(/\.0+$/, "") + "Spt"; // Septuagintillion
+    if (num >= 1e60) return (num / 1e60).toFixed(2).replace(/\.0+$/, "") + "Sex"; // Sexagintillion
+    if (num >= 1e50) return (num / 1e50).toFixed(2).replace(/\.0+$/, "") + "Qng"; // Quinquagintillion
+    if (num >= 1e40) return (num / 1e40).toFixed(2).replace(/\.0+$/, "") + "Qdg"; // Quadragintillion
     if (num >= 1e30) return (num / 1e30).toFixed(1).replace(/\.0$/, "") + "Dc"; // Dezillion
     if (num >= 1e27) return (num / 1e27).toFixed(1).replace(/\.0$/, "") + "No"; // Nonillion
     if (num >= 1e24) return (num / 1e24).toFixed(1).replace(/\.0$/, "") + "Oc"; // Oktillion
@@ -235,6 +344,18 @@ function updateStats() {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
+            if (data.energy >= 100000) {
+                document.getElementById("prestige-btn").classList.remove("hidden");
+                document.getElementById("prestige-message").classList.remove("hidden");
+            } else {
+                document.getElementById("prestige-btn").classList.add("hidden");
+                document.getElementById("prestige-message").classList.add("hidden");
+            }
+            document.getElementById("energy_boost_level").innerText = data.energy_boost_level;
+            document.getElementById("xp_boost_level").innerText = data.xp_boost_level;
+            document.getElementById("prestige_level").innerText = data.prestige_level;
+            document.getElementById("prestige_points").innerText = data.prestige_points;
+            document.getElementById("prestige_level").innerText = data.prestige_level;
             document.getElementById("energy").innerText = formatNumber(data.energy);
             document.getElementById("money").innerText = formatNumber(data.money);
             document.getElementById("level").innerText = data.level;
@@ -260,6 +381,7 @@ function updateStats() {
             document.getElementById("coal_price").innerText = formatNumber(data.coal_cost) + " €";
             document.getElementById("coal_count").innerText = `Bereits gekauft: ${formatNumber(data.coal_count)}`;
         }
+
     });
 }
 

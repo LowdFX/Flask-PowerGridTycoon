@@ -25,6 +25,11 @@ class Player(db.Model):
     xp_needed = db.Column(db.Float, default=10)  # XP für nächstes Level
     hydro_count = db.Column(db.Integer, default=0)
     coal_count = db.Column(db.Integer, default=0)
+    total_energy_generated = db.Column(db.Float, default=0)
+    prestige_level = db.Column(db.Integer, default=0)  # **NEU**
+    prestige_points = db.Column(db.Integer, default=0)
+    energy_boost_level = db.Column(db.Integer, default=0)
+    xp_boost_level = db.Column(db.Integer, default=0)
 
 
 
@@ -91,13 +96,49 @@ def game():
     return render_template("game.html", username=session["username"])
 
 
+@app.route("/prestige")
+def prestige():
+    if "username" not in session:
+        return jsonify({"error": "Nicht eingeloggt"}), 400
+
+    player = Player.query.filter_by(username=session["username"]).first()
+    if not player:
+        return jsonify({"error": "Spieler nicht gefunden"}), 400
+
+    if player.total_energy_generated < 100000:
+        return jsonify({"error": "Nicht genug erzeugte Energie für Prestige"}), 400
+
+    # Prestige-Punkte berechnen
+    prestige_points = int((player.total_energy_generated / 100000) ** 0.5)
+
+    # **Prestige-Level erhöhen & Punkte speichern**
+    player.prestige_level += 1
+    player.prestige_points += prestige_points
+
+    # **Spielerwerte zurücksetzen**
+    player.money = 100.0
+    player.energy = 0.0
+    player.power_rate = 1.0
+    player.upgrade_level = 1
+    player.xp = 0
+    player.level = 1
+    player.xp_needed = 10
+    player.total_energy_generated = 0
+
+    db.session.commit()
+
+    return jsonify({"success": True, "prestige_level": player.prestige_level, "prestige_points": player.prestige_points})
+
+
+
 
 @app.route("/leaderboard")
 def leaderboard():
-    players = Player.query.order_by(Player.level.desc()).limit(10).all()  # Top 10 Spieler nach Level
-    leaderboard_data = [{"username": p.username, "level": p.level} for p in players]
+    players = Player.query.order_by(Player.prestige_level.desc()).limit(10).all()  # Top 10 Spieler nach Prestige-Level
+    leaderboard_data = [{"username": p.username, "prestige_level": p.prestige_level} for p in players]
 
     return jsonify({"success": True, "leaderboard": leaderboard_data})
+
 
 
 @app.route("/generate_energy")
@@ -109,25 +150,21 @@ def generate_energy():
     if not player:
         return jsonify({"error": "Spieler nicht gefunden"}), 400
 
-    # Energie erzeugen
-    player.energy += player.power_rate
+    # Energieproduktion korrekt speichern
+    energy_gain = player.power_rate
+    player.energy += energy_gain
+    player.total_energy_generated += energy_gain  # **Fix: Gesamtenergie erhöhen**
 
-    # XP-Berechnung (geringerer XP-Gewinn pro Level, aber weiterhin ansteigend)
-    xp_gain = player.power_rate * (1 + player.level * 0.02)  # Jetzt weniger pro Level
+    # XP Berechnung mit exponentiellem Wachstum
+    xp_gain = player.power_rate * (1.05 ** player.level)
     player.xp += xp_gain
 
-    # Level-Up, falls XP-Leiste voll ist
+    # Level-Up Logik
     leveled_up = False
     while player.xp >= player.xp_needed:
-        player.xp -= player.xp_needed  # Rest-XP bleibt erhalten
+        player.xp -= player.xp_needed
         player.level += 1
-
-        # XP-Anforderung stärker erhöhen (Level 1-10: *2, danach *2.5)
-        if player.level < 10:
-            player.xp_needed *= 2.0  # **Jedes Level erfordert jetzt das Doppelte**
-        else:
-            player.xp_needed *= 2.5  # **Ab Level 10 wird es noch schwerer**
-
+        player.xp_needed *= 1.5  # XP-Anforderung steigt um 50%
         leveled_up = True
 
     db.session.commit()
@@ -140,6 +177,7 @@ def generate_energy():
         "xp": player.xp,
         "xp_needed": player.xp_needed,
         "level": player.level,
+        "total_energy_generated": player.total_energy_generated,  # **Debug: Anzeigen**
         "leveled_up": leveled_up
     })
 
@@ -171,11 +209,11 @@ def upgrade():
     if not player:
         return jsonify({"error": "Spieler nicht gefunden"}), 400
 
-    upgrade_cost = round(50.0 * (1.2 ** player.upgrade_level), 2)
+    upgrade_cost = round(50.0 * (1.15 ** player.upgrade_level), 2)
 
     if player.money >= upgrade_cost:
         player.money -= upgrade_cost
-        player.power_rate *= 1.5
+        player.power_rate *= 1.1  # Ertragsmultiplikator
         player.upgrade_level += 1
         db.session.commit()
 
@@ -188,6 +226,48 @@ def upgrade():
     else:
         return jsonify({"error": "Nicht genug Geld"}), 400
 
+
+@app.route("/buy_upgrade")
+def buy_upgrade():
+    if "username" not in session:
+        return jsonify({"error": "Nicht eingeloggt"}), 400
+
+    player = Player.query.filter_by(username=session["username"]).first()
+    if not player:
+        return jsonify({"error": "Spieler nicht gefunden"}), 400
+
+    upgrade_type = request.args.get("type")
+    
+    # Upgrade-Level abrufen
+    upgrade_levels = {
+        "energy_boost": player.energy_boost_level,
+        "xp_boost": player.xp_boost_level
+    }
+
+    # Skalierung der Kosten
+    base_cost = 5
+    cost = int(base_cost * (1.3 ** upgrade_levels[upgrade_type]))
+
+    if player.prestige_points < cost:
+        return jsonify({"error": "Nicht genug Prestige-Punkte"}), 400
+
+    # Prestige-Punkte abziehen & Level speichern
+    player.prestige_points -= cost
+    if upgrade_type == "energy_boost":
+        player.energy_boost_level += 1
+        player.power_rate *= 1.1  # +10% Energie
+    elif upgrade_type == "xp_boost":
+        player.xp_boost_level += 1
+        player.xp_needed *= 0.9  # -10% XP Kosten pro Level
+
+    db.session.commit()
+
+    return jsonify({
+        "success": True,
+        "new_level": upgrade_levels[upgrade_type] + 1,
+        "new_cost": int(base_cost * (1.3 ** (upgrade_levels[upgrade_type] + 1))),
+        "prestige_points": player.prestige_points
+    })
 
 
 
@@ -236,6 +316,10 @@ def get_stats():
     hydro_cost = round(500.0 * (1.5 ** player.hydro_count), 2)
     coal_cost = round(1500.0 * (1.7 ** player.coal_count), 2)
 
+    # Falls Prestige-Werte nicht existieren, setze sie auf 0
+    prestige_level = getattr(player, "prestige_level", 0)
+    prestige_points = getattr(player, "prestige_points", 0)
+
     return jsonify({
         "success": True,
         "money": player.money,
@@ -252,7 +336,12 @@ def get_stats():
         "upgrade_level": player.upgrade_level,
         "module_count": player.module_count,
         "hydro_count": player.hydro_count,
-        "coal_count": player.coal_count
+        "coal_count": player.coal_count,
+        "total_energy_generated": player.total_energy_generated,
+        "prestige_points": player.prestige_points,
+        "prestige_level": player.prestige_level,
+        "energy_boost_level": player.energy_boost_level,
+        "xp_boost_level": player.xp_boost_level
     })
 
 
