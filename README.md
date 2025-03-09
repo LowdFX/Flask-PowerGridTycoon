@@ -26,12 +26,11 @@ Kopiere das Projekt auf dein Gerät:
 ```sh
 git clone https://github.com/LowdFX/power-grid-tycoon.git
 cd power-grid-tycoon
-```sh
+
 Installiere die Abhängigkeiten:
-```sh
+
 pip install -r requirements.txt
-```sh
+
 Starte die Anwendung:
-```sh
+
 python3 app.py
-```sh
