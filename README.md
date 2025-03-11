@@ -1,5 +1,7 @@
 # ⚡ Power Grid Tycoon
 
+🚀 Dieses Projekt wird nicht mehr weiterentwickelt. Die neue Version findest du hier: [PowerGridTycoon mit FastAPI](https://github.com/LowdFX/FastAPI-PowerGridTycoon)
+
 **Power Grid Tycoon** ist ein browserbasiertes Tycoon-Spiel, in dem du dein eigenes Energieimperium aufbauen kannst. Du produzierst, speicherst und verkaufst Energie, investierst in Upgrades und baust verschiedene Kraftwerke, um dein Einkommen zu maximieren.
 
 ## 🚀 Features
@@ -26,11 +28,13 @@ Kopiere das Projekt auf dein Gerät:
 ```sh
 git clone https://github.com/LowdFX/power-grid-tycoon.git
 cd power-grid-tycoon
-
+```
 Installiere die Abhängigkeiten:
-
+```sh
 pip install -r requirements.txt
-
+```
 Starte die Anwendung:
-
+```sh
 python3 app.py
+```
+
